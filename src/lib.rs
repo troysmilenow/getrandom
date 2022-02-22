@@ -157,6 +157,8 @@
 #[macro_use]
 extern crate cfg_if;
 
+extern crate sgx_libc;
+
 mod error;
 mod util;
 // To prevent a breaking change when targets are added, we always export the
@@ -171,70 +173,71 @@ pub use crate::error::Error;
 // System-specific implementations.
 //
 // These should all provide getrandom_inner with the same signature as getrandom.
-cfg_if! {
-    if #[cfg(any(target_os = "emscripten", target_os = "haiku",
-                 target_os = "redox"))] {
-        mod util_libc;
-        #[path = "use_file.rs"] mod imp;
-    } else if #[cfg(any(target_os = "android", target_os = "linux"))] {
-        mod util_libc;
-        mod use_file;
-        #[path = "linux_android.rs"] mod imp;
-    } else if #[cfg(any(target_os = "illumos", target_os = "solaris"))] {
-        mod util_libc;
-        mod use_file;
-        #[path = "solaris_illumos.rs"] mod imp;
-    } else if #[cfg(any(target_os = "freebsd", target_os = "netbsd"))] {
-        mod util_libc;
-        #[path = "bsd_arandom.rs"] mod imp;
-    } else if #[cfg(target_os = "dragonfly")] {
-        mod util_libc;
-        mod use_file;
-        #[path = "dragonfly.rs"] mod imp;
-    } else if #[cfg(target_os = "fuchsia")] {
-        #[path = "fuchsia.rs"] mod imp;
-    } else if #[cfg(target_os = "ios")] {
-        #[path = "ios.rs"] mod imp;
-    } else if #[cfg(target_os = "macos")] {
-        mod util_libc;
-        mod use_file;
-        #[path = "macos.rs"] mod imp;
-    } else if #[cfg(target_os = "openbsd")] {
-        mod util_libc;
-        #[path = "openbsd.rs"] mod imp;
-    } else if #[cfg(target_os = "wasi")] {
-        #[path = "wasi.rs"] mod imp;
-    } else if #[cfg(all(target_arch = "x86_64", target_os = "hermit"))] {
-        #[path = "rdrand.rs"] mod imp;
-    } else if #[cfg(target_os = "vxworks")] {
-        mod util_libc;
-        #[path = "vxworks.rs"] mod imp;
-    } else if #[cfg(target_os = "solid_asp3")] {
-        #[path = "solid.rs"] mod imp;
-    } else if #[cfg(target_os = "espidf")] {
-        #[path = "espidf.rs"] mod imp;
-    } else if #[cfg(windows)] {
-        #[path = "windows.rs"] mod imp;
-    } else if #[cfg(all(target_arch = "x86_64", target_env = "sgx"))] {
-        #[path = "rdrand.rs"] mod imp;
-    } else if #[cfg(all(feature = "rdrand",
-                        any(target_arch = "x86_64", target_arch = "x86")))] {
-        #[path = "rdrand.rs"] mod imp;
-    } else if #[cfg(all(feature = "js",
-                        target_arch = "wasm32", target_os = "unknown"))] {
-        #[path = "js.rs"] mod imp;
-    } else if #[cfg(feature = "custom")] {
-        use custom as imp;
-    } else if #[cfg(all(target_arch = "wasm32", target_os = "unknown"))] {
-        compile_error!("the wasm32-unknown-unknown target is not supported by \
-                        default, you may need to enable the \"js\" feature. \
-                        For more information see: \
-                        https://docs.rs/getrandom/#webassembly-support");
-    } else {
-        compile_error!("target is not supported, for more information see: \
-                        https://docs.rs/getrandom/#unsupported-targets");
-    }
-}
+// cfg_if! {
+//     if #[cfg(any(target_os = "emscripten", target_os = "haiku",
+//                  target_os = "redox"))] {
+//         mod util_libc;
+//         #[path = "use_file.rs"] mod imp;
+//     } else if #[cfg(any(target_os = "android", target_os = "linux"))] {
+//         mod util_libc;
+//         mod use_file;
+//         #[path = "linux_android.rs"] mod imp;
+//     } else if #[cfg(any(target_os = "illumos", target_os = "solaris"))] {
+//         mod util_libc;
+//         mod use_file;
+//         #[path = "solaris_illumos.rs"] mod imp;
+//     } else if #[cfg(any(target_os = "freebsd", target_os = "netbsd"))] {
+//         mod util_libc;
+//         #[path = "bsd_arandom.rs"] mod imp;
+//     } else if #[cfg(target_os = "dragonfly")] {
+//         mod util_libc;
+//         mod use_file;
+//         #[path = "dragonfly.rs"] mod imp;
+//     } else if #[cfg(target_os = "fuchsia")] {
+//         #[path = "fuchsia.rs"] mod imp;
+//     } else if #[cfg(target_os = "ios")] {
+//         #[path = "ios.rs"] mod imp;
+//     } else if #[cfg(target_os = "macos")] {
+//         mod util_libc;
+//         mod use_file;
+//         #[path = "macos.rs"] mod imp;
+//     } else if #[cfg(target_os = "openbsd")] {
+//         mod util_libc;
+//         #[path = "openbsd.rs"] mod imp;
+//     } else if #[cfg(target_os = "wasi")] {
+//         #[path = "wasi.rs"] mod imp;
+//     } else if #[cfg(all(target_arch = "x86_64", target_os = "hermit"))] {
+//         #[path = "rdrand.rs"] mod imp;
+//     } else if #[cfg(target_os = "vxworks")] {
+//         mod util_libc;
+//         #[path = "vxworks.rs"] mod imp;
+//     } else if #[cfg(target_os = "solid_asp3")] {
+//         #[path = "solid.rs"] mod imp;
+//     } else if #[cfg(target_os = "espidf")] {
+//         #[path = "espidf.rs"] mod imp;
+//     } else if #[cfg(windows)] {
+//         #[path = "windows.rs"] mod imp;
+//     } else if #[cfg(all(target_arch = "x86_64", target_env = "sgx"))] {
+//         #[path = "rdrand.rs"] mod imp;
+//     } else if #[cfg(all(feature = "rdrand",
+//                         any(target_arch = "x86_64", target_arch = "x86")))] {
+//         #[path = "rdrand.rs"] mod imp;
+//     } else if #[cfg(all(feature = "js",
+//                         target_arch = "wasm32", target_os = "unknown"))] {
+//         #[path = "js.rs"] mod imp;
+//     } else if #[cfg(feature = "custom")] {
+//         use custom as imp;
+//     } else if #[cfg(all(target_arch = "wasm32", target_os = "unknown"))] {
+//         compile_error!("the wasm32-unknown-unknown target is not supported by \
+//                         default, you may need to enable the \"js\" feature. \
+//                         For more information see: \
+//                         https://docs.rs/getrandom/#webassembly-support");
+//     } else {
+//         compile_error!("target is not supported, for more information see: \
+//                         https://docs.rs/getrandom/#unsupported-targets");
+//     }
+// }
+#[path = "rdrand.rs"] mod imp;
 
 /// Fill `dest` with random bytes from the system's preferred random number
 /// source.
