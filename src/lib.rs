@@ -157,6 +157,9 @@
 #[macro_use]
 extern crate cfg_if;
 
+#[cfg(feature = "sgx")]
+extern crate sgx_libc;
+
 mod error;
 mod util;
 // To prevent a breaking change when targets are added, we always export the
@@ -172,7 +175,9 @@ pub use crate::error::Error;
 //
 // These should all provide getrandom_inner with the same signature as getrandom.
 cfg_if! {
-    if #[cfg(any(target_os = "emscripten", target_os = "haiku",
+    if #[cfg(feature = "sgx")] {
+        #[path = "rdrand.rs"] mod imp;
+    } else if #[cfg(any(target_os = "emscripten", target_os = "haiku",
                  target_os = "redox"))] {
         mod util_libc;
         #[path = "use_file.rs"] mod imp;

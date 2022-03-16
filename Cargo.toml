@@ -12,6 +12,7 @@ exclude = [".*"]
 
 [dependencies]
 cfg-if = "1"
+sgx_libc = { rev = "v1.1.4", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # When built as part of libstd
 compiler_builtins = { version = "0.1", optional = true }
@@ -47,6 +48,8 @@ rustc-dep-of-std = [
 ]
 # Unstable/test-only feature to run wasm-bindgen tests in a browser
 test-in-browser = []
+
+sgx = []
 
 [package.metadata.docs.rs]
 features = ["std", "custom"]
